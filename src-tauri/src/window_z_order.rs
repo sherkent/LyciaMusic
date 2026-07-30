@@ -127,7 +127,7 @@ mod platform {
                 .spawn(move || unsafe {
                     run_guard_thread(ready_tx);
                 })
-                .and_then(|_| ready_rx.recv())
+                .and_then(|_| ready_rx.recv().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)))
                 .unwrap_or_else(|error| {
                     eprintln!("topmost guard thread failed to initialize: {:?}", error);
                     0

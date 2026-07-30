@@ -542,7 +542,7 @@ mod zorder_guard {
                     unhook(&mut hook_focus);
                     unhook(&mut hook_menu);
                 })
-                .and_then(|_| rx.recv())
+                .and_then(|_| rx.recv().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)))
                 .unwrap_or_else(|error| {
                     eprintln!("taskbar zorder guard thread init failed: {:?}", error);
                     0
