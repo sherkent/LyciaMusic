@@ -415,16 +415,19 @@ mod zorder_guard {
         refresh_player_topmost(player);
 
         let player_hwnd = player as isize;
-        std::thread::spawn(move || {
-            for delay_ms in [40_u64, 120, 300, 700] {
-                std::thread::sleep(Duration::from_millis(delay_ms));
-                if REFRESH_TOKEN.load(Ordering::Relaxed) != token {
-                    return;
-                }
+        // 修复：spawn 可能因资源不足失败，避免 unwrap panic；失败时仅跳过后续刷新
+        let _ = std::thread::Builder::new()
+            .name("lycia-taskbar-refresh".into())
+            .spawn(move || {
+                for delay_ms in [40_u64, 120, 300, 700] {
+                    std::thread::sleep(Duration::from_millis(delay_ms));
+                    if REFRESH_TOKEN.load(Ordering::Relaxed) != token {
+                        return;
+                    }
 
-                refresh_player_topmost(player_hwnd as HWND);
-            }
-        });
+                    refresh_player_topmost(player_hwnd as HWND);
+                }
+            });
     }
 
     /// WinEventHook 回调（与 TopMostGuard 逻辑对称，但守护目标是播控窗口）
@@ -470,74 +473,81 @@ mod zorder_guard {
         GUARD_THREAD.get_or_init(|| {
             let (tx, rx) = mpsc::channel::<u32>();
 
-            std::thread::spawn(move || unsafe {
-                let tid = GetCurrentThreadId();
+            // 修复：spawn 或 recv 失败时不应 panic；thread_id 为 0 时后续 PostThreadMessage 会自然失败
+            let thread_id = std::thread::Builder::new()
+                .name("lycia-taskbar-guard".into())
+                .spawn(move || unsafe {
+                    let tid = GetCurrentThreadId();
 
-                // 先强制创建消息队列，再通知主线程，防止 PostThreadMessageW 发到空队列
-                let mut msg: MSG = std::mem::zeroed();
-                PeekMessageW(&mut msg, std::ptr::null_mut(), 0, 0, PM_NOREMOVE);
-                let _ = tx.send(tid);
+                    // 先强制创建消息队列，再通知主线程，防止 PostThreadMessageW 发到空队列
+                    let mut msg: MSG = std::mem::zeroed();
+                    PeekMessageW(&mut msg, std::ptr::null_mut(), 0, 0, PM_NOREMOVE);
+                    let _ = tx.send(tid);
 
-                // 同时维护三个 hook 句柄，对应三类事件
-                let mut hook_fg: HWINEVENTHOOK = std::ptr::null_mut();   // EVENT_SYSTEM_FOREGROUND
-                let mut hook_focus: HWINEVENTHOOK = std::ptr::null_mut(); // EVENT_OBJECT_FOCUS
-                let mut hook_menu: HWINEVENTHOOK = std::ptr::null_mut();  // EVENT_SYSTEM_MENUSTART
+                    // 同时维护三个 hook 句柄，对应三类事件
+                    let mut hook_fg: HWINEVENTHOOK = std::ptr::null_mut();   // EVENT_SYSTEM_FOREGROUND
+                    let mut hook_focus: HWINEVENTHOOK = std::ptr::null_mut(); // EVENT_OBJECT_FOCUS
+                    let mut hook_menu: HWINEVENTHOOK = std::ptr::null_mut();  // EVENT_SYSTEM_MENUSTART
 
-                let install_hook = |event: u32| -> HWINEVENTHOOK {
-                    SetWinEventHook(
-                        event,
-                        event,
-                        std::ptr::null_mut(),
-                        Some(hook_proc),
-                        0, // 所有进程
-                        0, // 所有线程
-                        WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS,
-                    )
-                };
+                    let install_hook = |event: u32| -> HWINEVENTHOOK {
+                        SetWinEventHook(
+                            event,
+                            event,
+                            std::ptr::null_mut(),
+                            Some(hook_proc),
+                            0, // 所有进程
+                            0, // 所有线程
+                            WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS,
+                        )
+                    };
 
-                let unhook = |h: &mut HWINEVENTHOOK| {
-                    if !h.is_null() {
-                        UnhookWinEvent(*h);
-                        *h = std::ptr::null_mut();
-                    }
-                };
-
-                loop {
-                    if GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) <= 0 {
-                        break;
-                    }
-
-                    match msg.message {
-                        WM_INSTALL => {
-                            // 先卸载旧 hook，防止重复安装
-                            unhook(&mut hook_fg);
-                            unhook(&mut hook_focus);
-                            unhook(&mut hook_menu);
-
-                            hook_fg    = install_hook(EVENT_SYSTEM_FOREGROUND);
-                            hook_focus = install_hook(EVENT_OBJECT_FOCUS);
-                            hook_menu  = install_hook(EVENT_SYSTEM_MENUSTART);
+                    let unhook = |h: &mut HWINEVENTHOOK| {
+                        if !h.is_null() {
+                            UnhookWinEvent(*h);
+                            *h = std::ptr::null_mut();
                         }
-                        WM_UNINSTALL => {
-                            unhook(&mut hook_fg);
-                            unhook(&mut hook_focus);
-                            unhook(&mut hook_menu);
-                            PLAYER_HWND.store(0, Ordering::Relaxed);
+                    };
+
+                    loop {
+                        if GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) <= 0 {
+                            break;
                         }
-                        _ => {
-                            TranslateMessage(&msg);
-                            DispatchMessageW(&msg);
+
+                        match msg.message {
+                            WM_INSTALL => {
+                                // 先卸载旧 hook，防止重复安装
+                                unhook(&mut hook_fg);
+                                unhook(&mut hook_focus);
+                                unhook(&mut hook_menu);
+
+                                hook_fg    = install_hook(EVENT_SYSTEM_FOREGROUND);
+                                hook_focus = install_hook(EVENT_OBJECT_FOCUS);
+                                hook_menu  = install_hook(EVENT_SYSTEM_MENUSTART);
+                            }
+                            WM_UNINSTALL => {
+                                unhook(&mut hook_fg);
+                                unhook(&mut hook_focus);
+                                unhook(&mut hook_menu);
+                                PLAYER_HWND.store(0, Ordering::Relaxed);
+                            }
+                            _ => {
+                                TranslateMessage(&msg);
+                                DispatchMessageW(&msg);
+                            }
                         }
                     }
-                }
 
-                // 线程异常退出时确保所有 hook 被清理
-                unhook(&mut hook_fg);
-                unhook(&mut hook_focus);
-                unhook(&mut hook_menu);
-            });
+                    // 线程异常退出时确保所有 hook 被清理
+                    unhook(&mut hook_fg);
+                    unhook(&mut hook_focus);
+                    unhook(&mut hook_menu);
+                })
+                .and_then(|_| rx.recv())
+                .unwrap_or_else(|error| {
+                    eprintln!("taskbar zorder guard thread init failed: {:?}", error);
+                    0
+                });
 
-            let thread_id = rx.recv().expect("taskbar zorder guard thread init failed");
             GuardThread { thread_id }
         })
     }

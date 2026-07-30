@@ -3,6 +3,7 @@ import { computed, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMoun
 import { storeToRefs } from 'pinia';
 import { dragSession } from '../../composables/dragState';
 import type { Song } from '../../types';
+import { getSongDisplayTitle } from '../../features/library/playerLibraryViewShared';
 import { songTableViewportCoverSnapshotCache } from '../../caches/imageCaches';
 import { useLibraryCollections } from '../../features/collections/useLibraryCollections';
 import { useSettings } from '../../features/settings/useSettings';
@@ -674,7 +675,7 @@ const getRowStyle = (songIndex: number, songPath: string) => {
 
           <div class="flex-[0_1_40%] min-w-0 flex flex-col justify-center gap-0.5">
             <div class="min-w-0 flex items-baseline gap-1.5 leading-snug">
-              <span class="min-w-0 truncate text-[15px] text-gray-900 dark:text-gray-100 font-semibold">{{ song.title || song.name.replace(/\.[^/.]+$/, '') }}</span>
+              <span class="min-w-0 truncate text-[15px] text-gray-900 dark:text-gray-100 font-semibold">{{ getSongDisplayTitle(song) }}</span>
               <span
                 v-if="hasVisibleSongComment(song)"
                 class="max-w-[42%] shrink-0 truncate text-xs font-medium text-gray-500 dark:text-white/45"

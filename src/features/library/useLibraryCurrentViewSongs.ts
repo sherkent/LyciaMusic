@@ -434,13 +434,13 @@ export function useLibraryCurrentViewSongs({
 
     if (favTab.value === 'artists') {
       return favDetailFilter.value?.type === 'artist'
-        ? favoriteSongPaths.value.filter(path => songHasArtist(songLookup.value.get(path)!, favDetailFilter.value!.name))
+        ? favoriteSongPaths.value.filter(path => songHasArtist(songLookup.value.get(path), favDetailFilter.value!.name))
         : [];
     }
 
     if (favTab.value === 'albums') {
       return favDetailFilter.value?.type === 'album'
-        ? favoriteSongPaths.value.filter(path => matchesAlbumKey(songLookup.value.get(path)!, favDetailFilter.value!.name))
+        ? favoriteSongPaths.value.filter(path => matchesAlbumKey(songLookup.value.get(path), favDetailFilter.value!.name))
         : [];
     }
 
@@ -544,7 +544,7 @@ export function useLibraryCurrentViewSongs({
         if (localSortMode.value === 'title') {
           return sortItemsByAlphabetIndex(
             allViewSongPaths.value,
-            (path) => getSongTitleLabel(songLookup.value.get(path)!),
+            (path) => getSongTitleLabel(songLookup.value.get(path)),
           );
         }
         return allViewSongPaths.value;
@@ -583,7 +583,7 @@ export function useLibraryCurrentViewSongs({
 
         return sortItemsByAlphabetIndex(
           canonicalSongPaths.value.filter(matchesQuery),
-          (path) => getSongTitleLabel(songLookup.value.get(path)!),
+          (path) => getSongTitleLabel(songLookup.value.get(path)),
         );
       }
 
@@ -592,20 +592,20 @@ export function useLibraryCurrentViewSongs({
           if (folderSortMode.value === 'name') {
             return sortItemsByAlphabetIndex(
               folderViewSongPaths.value,
-              (path) => getSongFileNameLabel(songLookup.value.get(path)!),
+              (path) => getSongFileNameLabel(songLookup.value.get(path)),
             );
           }
           if (folderSortMode.value === 'title') {
             return sortItemsByAlphabetIndex(
               folderViewSongPaths.value,
-              (path) => getSongTitleLabel(songLookup.value.get(path)!),
+              (path) => getSongTitleLabel(songLookup.value.get(path)),
             );
           }
           return folderViewSongPaths.value;
         }
 
         return sortItemsByAlphabetIndex(currentFolderSongPaths.value.filter(matchesQuery), (path) =>
-          getSongTitleLabel(songLookup.value.get(path)!),
+          getSongTitleLabel(songLookup.value.get(path)),
         );
       }
 
@@ -652,7 +652,7 @@ export function useLibraryCurrentViewSongs({
         if (localSortMode.value === 'title') {
           return sortItemsByAlphabetIndex(
             pathsToRender,
-            (path) => getSongTitleLabel(songLookup.value.get(path)!),
+            (path) => getSongTitleLabel(songLookup.value.get(path)),
           );
         }
         return pathsToRender;
@@ -680,13 +680,13 @@ export function useLibraryCurrentViewSongs({
         if (folderSortMode.value === 'name') {
           return sortItemsByAlphabetIndex(
             folderViewSongPaths.value,
-            (path) => getSongFileNameLabel(songLookup.value.get(path)!),
+            (path) => getSongFileNameLabel(songLookup.value.get(path)),
           );
         }
         if (folderSortMode.value === 'title') {
           return sortItemsByAlphabetIndex(
             folderViewSongPaths.value,
-            (path) => getSongTitleLabel(songLookup.value.get(path)!),
+            (path) => getSongTitleLabel(songLookup.value.get(path)),
           );
         }
         return folderViewSongPaths.value;

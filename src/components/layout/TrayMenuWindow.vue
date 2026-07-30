@@ -26,6 +26,7 @@ import {
   type TrayMenuStatePayload,
 } from '../../features/tray/actions';
 import type { Song } from '../../types';
+import { getSongDisplayTitle } from '../../features/library/playerLibraryViewShared';
 
 const appWindow = getCurrentWindow();
 const currentSong = ref<Song | null>(null);
@@ -42,7 +43,7 @@ const trackLabel = computed(() => {
   const song = currentSong.value;
   if (!song) return 'Lycia Player';
 
-  const title = song.title || song.name.replace(/\.[^/.]+$/, '');
+  const title = getSongDisplayTitle(song);
   return song.artist ? `${title} - ${song.artist}` : title;
 });
 

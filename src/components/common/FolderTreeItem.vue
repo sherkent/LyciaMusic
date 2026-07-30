@@ -106,7 +106,7 @@ import { dragSession } from '../../composables/dragState';
 import { useCoverCache } from '../../composables/useCoverCache';
 import { useLibraryStore } from '../../features/library/store';
 import { sortItemsByAlphabetIndex } from '../../utils/alphabetIndex';
-import type { FolderNode, Song } from '../../types';
+import type { FolderNode } from '../../types';
 import { getSongFileNameLabel, getSongTitleLabel, isDirectParent, compareSongPathsByTrackNumber } from '../../features/library/playerLibraryViewShared';
 
 const props = defineProps<{
@@ -167,11 +167,11 @@ const sortedDirectFolderSongPaths = computed(() => {
   }
 
   if (folderSortMode.value === 'title') {
-    return sortItemsByAlphabetIndex(paths, (path) => getSongTitleLabel(songLookup.value.get(path)!));
+    return sortItemsByAlphabetIndex(paths, (path) => getSongTitleLabel(songLookup.value.get(path)));
   }
 
   if (folderSortMode.value === 'name') {
-    return sortItemsByAlphabetIndex(paths, (path) => getSongFileNameLabel(songLookup.value.get(path)!));
+    return sortItemsByAlphabetIndex(paths, (path) => getSongFileNameLabel(songLookup.value.get(path)));
   }
 
   if (folderSortMode.value === 'artist') {
@@ -179,8 +179,8 @@ const sortedDirectFolderSongPaths = computed(() => {
       (songLookup.value.get(left)?.artist || '').localeCompare(
         songLookup.value.get(right)?.artist || '',
         'zh-CN',
-      ) || (getSongTitleLabel(songLookup.value.get(left) as Song) || '').localeCompare(
-        getSongTitleLabel(songLookup.value.get(right) as Song) || '',
+      ) || (getSongTitleLabel(songLookup.value.get(left)) || '').localeCompare(
+        getSongTitleLabel(songLookup.value.get(right)) || '',
         'zh-CN',
       ),
     );
@@ -189,8 +189,8 @@ const sortedDirectFolderSongPaths = computed(() => {
   if (folderSortMode.value === 'added_at') {
     return [...paths].sort((left, right) =>
       ((songLookup.value.get(right)?.added_at || 0) - (songLookup.value.get(left)?.added_at || 0))
-      || (getSongTitleLabel(songLookup.value.get(left) as Song) || '').localeCompare(
-        getSongTitleLabel(songLookup.value.get(right) as Song) || '',
+      || (getSongTitleLabel(songLookup.value.get(left)) || '').localeCompare(
+        getSongTitleLabel(songLookup.value.get(right)) || '',
         'zh-CN',
       ),
     );
@@ -199,8 +199,8 @@ const sortedDirectFolderSongPaths = computed(() => {
   if (folderSortMode.value === 'added_at_asc') {
     return [...paths].sort((left, right) =>
       ((songLookup.value.get(left)?.added_at || 0) - (songLookup.value.get(right)?.added_at || 0))
-      || (getSongTitleLabel(songLookup.value.get(left) as Song) || '').localeCompare(
-        getSongTitleLabel(songLookup.value.get(right) as Song) || '',
+      || (getSongTitleLabel(songLookup.value.get(left)) || '').localeCompare(
+        getSongTitleLabel(songLookup.value.get(right)) || '',
         'zh-CN',
       ),
     );

@@ -123,8 +123,15 @@ fn install_window_boundary<R: tauri::Runtime>(app: &tauri::App<R>) {
 }
 
 fn build_tray<R: tauri::Runtime>(app: &tauri::App<R>) -> tauri::Result<()> {
+    let window_icon = app.default_window_icon().ok_or_else(|| {
+        // 修复：default_window_icon 可能返回 None，避免 unwrap 导致 panic
+        tauri::Error::Io(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "default window icon is missing",
+        ))
+    })?;
     let _tray = TrayIconBuilder::with_id("tray")
-        .icon(app.default_window_icon().unwrap().clone())
+        .icon(window_icon.clone())
         .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {

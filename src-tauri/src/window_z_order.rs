@@ -121,13 +121,17 @@ mod platform {
         HOOK_THREAD.get_or_init(|| {
             let (ready_tx, ready_rx) = mpsc::channel();
 
-            std::thread::spawn(move || unsafe {
-                run_guard_thread(ready_tx);
-            });
-
-            let thread_id = ready_rx
-                .recv()
-                .expect("topmost guard thread failed to initialize");
+            // 修复：spawn 可能因资源不足失败，避免 unwrap panic；线程 ID 未收到时返回 0，后续 PostThreadMessage 会自然失败
+            let thread_id = std::thread::Builder::new()
+                .name("lycia-topmost-guard".into())
+                .spawn(move || unsafe {
+                    run_guard_thread(ready_tx);
+                })
+                .and_then(|_| ready_rx.recv())
+                .unwrap_or_else(|error| {
+                    eprintln!("topmost guard thread failed to initialize: {:?}", error);
+                    0
+                });
 
             HookThreadHandle { thread_id }
         })

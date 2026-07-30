@@ -13,12 +13,16 @@ use tokio::io::AsyncWriteExt;
 pub(crate) fn shared_client() -> &'static Client {
     static CLIENT: OnceLock<Client> = OnceLock::new();
     CLIENT.get_or_init(|| {
+        // 修复：reqwest Client 构建依赖系统 TLS，失败时不应 panic，回退到最小配置
         Client::builder()
             .connect_timeout(Duration::from_secs(10))
             .timeout(Duration::from_secs(300))
             .pool_max_idle_per_host(4)
             .build()
-            .expect("build webdav http client")
+            .unwrap_or_else(|error| {
+                eprintln!("failed to build configured webdav client, falling back to default: {:?}", error);
+                Client::new()
+            })
     })
 }
 

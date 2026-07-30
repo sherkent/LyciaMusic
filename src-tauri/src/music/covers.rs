@@ -33,7 +33,11 @@ mod tests {
 }
 
 pub fn get_cover_cache_dir(app: &AppHandle) -> PathBuf {
-    let dir = app.path().app_data_dir().unwrap().join("covers");
+    let base = app.path().app_data_dir().unwrap_or_else(|_| {
+        // 修复：app_data_dir 可能因权限或路径解析失败，回退到临时目录避免 panic
+        std::env::temp_dir().join("lycia_music_app_data")
+    });
+    let dir = base.join("covers");
     if !dir.exists() {
         let _ = fs::create_dir_all(&dir);
     }
