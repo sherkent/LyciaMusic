@@ -21,6 +21,7 @@ import {
   type MiniPlayerStatePayload,
 } from '../../features/miniPlayer/shared';
 import type { Song } from '../../types';
+import { getSongDisplayTitle } from '../../features/library/playerLibraryViewShared';
 
 const appWindow = getCurrentWindow();
 const currentSong = ref<Song | null>(null);
@@ -442,7 +443,7 @@ onUnmounted(() => {
             </div>
 
             <div class="min-w-0 flex-1">
-              <div class="text-xs truncate font-medium">{{ song.title || song.name.replace(/\.[^/.]+$/, '') }}</div>
+              <div class="text-xs truncate font-medium">{{ getSongDisplayTitle(song) }}</div>
               <div class="text-[10px] truncate" :class="currentSong?.path === song.path ? 'text-[#EC4141]/70' : 'text-gray-400 dark:text-white/30'">{{ song.artist || 'Unknown Artist' }}</div>
             </div>
 

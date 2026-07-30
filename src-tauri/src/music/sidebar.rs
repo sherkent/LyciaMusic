@@ -61,9 +61,10 @@ pub async fn add_sidebar_folder(path: String, db_state: State<'_, DbState>) -> R
             "INSERT OR REPLACE INTO sidebar_folders (path, added_at) VALUES (?1, ?2)",
             [
                 &normalized,
+                // 修复：系统时钟异常时 duration_since 会 panic，使用 unwrap_or_default 回退到 0
                 &SystemTime::now()
                     .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap()
+                    .unwrap_or_default()
                     .as_secs()
                     .to_string(),
             ],

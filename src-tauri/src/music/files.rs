@@ -644,37 +644,30 @@ pub fn move_music_file(
 
 #[tauri::command]
 pub fn show_in_folder(path: String) {
+    // 修复：spawn 失败时不应调用 child_dummy（Windows 没有 true 命令会再次 panic），改为静默忽略错误
     #[cfg(target_os = "windows")]
     {
-        Command::new("explorer")
+        let _ = Command::new("explorer")
             .args(["/select,", &path])
             .spawn()
-            .unwrap_or_else(|_| {
-                println!("Failed");
-                child_dummy()
-            });
+            .map_err(|error| println!("Failed to open folder: {:?}", error));
     }
     #[cfg(target_os = "macos")]
     {
-        Command::new("open")
+        let _ = Command::new("open")
             .args(["-R", &path])
             .spawn()
-            .unwrap_or_else(|_| {
-                println!("Failed");
-                child_dummy()
-            });
+            .map_err(|error| println!("Failed to reveal file: {:?}", error));
     }
     #[cfg(target_os = "linux")]
     {
         if let Some(parent) = std::path::Path::new(&path).parent() {
-            Command::new("xdg-open").arg(parent).spawn().ok();
+            let _ = Command::new("xdg-open")
+                .arg(parent)
+                .spawn()
+                .map_err(|error| println!("Failed to open folder: {:?}", error));
         }
     }
-}
-
-#[cfg(any(target_os = "windows", target_os = "macos"))]
-fn child_dummy() -> std::process::Child {
-    Command::new("true").spawn().unwrap()
 }
 
 #[tauri::command]

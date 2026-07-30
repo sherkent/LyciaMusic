@@ -40,7 +40,8 @@ let sessionStartTime: number | null = null;
 let accumulatedTime = 0;
 let isSeeking = false;
 
-const getSmtcTitle = (song: Song) => song.title?.trim() || song.name.replace(/\.[^/.]+$/, '');
+const getSmtcTitle = (song: Song) => song.title?.trim() || song.name?.replace(/\.[^/.]+$/, '') || song.name || '';
+// 修复：song.name 可能为 undefined，先做可选链处理，避免调用 replace 时抛出 TypeError
 const LOW_POWER_PROGRESS_UPDATE_MS = 1000;
 
 export const createPlayerPlayback = ({

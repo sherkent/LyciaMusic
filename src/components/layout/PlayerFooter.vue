@@ -10,6 +10,7 @@ import EqualizerPanel from '../player/EqualizerPanel.vue';
 import { useSettings } from '../../features/settings/useSettings';
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import type { RemoteDownloadProgress } from '../../types';
+import { getSongDisplayTitle } from '../../features/library/playerLibraryViewShared';
 import {
   FOOTER_PROGRESS_HIDDEN_KEY,
   getProgressVisualState,
@@ -366,7 +367,7 @@ onUnmounted(() => {
         >
           <div class="flex items-center">
             <div class="text-sm font-bold tracking-wide truncate pr-2 cursor-default">
-              {{ currentSong ? (currentSong.title || currentSong.name.replace(/\.[^/.]+$/, "")) : '听我想听的音乐' }}
+              {{ currentSong ? getSongDisplayTitle(currentSong) : '听我想听的音乐' }}
             </div>
             <button 
                v-if="currentSong" 

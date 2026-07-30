@@ -4,6 +4,7 @@ import type { ComponentPublicInstance } from 'vue';
 import { usePlayer } from '../../composables/player';
 import { useThemeSettings } from '../../composables/useThemeSettings';
 import { isRemoteSong } from '../../utils/remoteSong';
+import { getSongDisplayTitle } from '../../features/library/playerLibraryViewShared';
 import ModernModal from '../common/ModernModal.vue';
 
 const {
@@ -141,7 +142,7 @@ watch(
 
             <div class="flex-1 min-w-0 pr-4 flex flex-col">
               <div class="flex min-w-0 items-center gap-1.5">
-                <span class="min-w-0 truncate text-sm font-medium leading-tight">{{ song.title || song.name.replace(/\.[^/.]+$/, "") }}</span>
+                <span class="min-w-0 truncate text-sm font-medium leading-tight">{{ getSongDisplayTitle(song) }}</span>
                 <span
                   v-if="isRemoteSong(song)"
                   class="shrink-0 rounded-full border border-[#EC4141]/20 bg-[#EC4141]/10 px-1.5 py-[1px] text-[10px] font-bold text-[#EC4141]"

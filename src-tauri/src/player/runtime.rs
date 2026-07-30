@@ -221,7 +221,10 @@ fn initialize_media_controls(app: &AppHandle) -> Arc<Mutex<Option<MediaControls>
                                 }
                                 _ => {}
                             });
-                            *controls.lock().unwrap() = Some(mc);
+                            // 修复：对 poisoned mutex 做防御，避免其他线程 panic 后此处 panic
+                            if let Ok(mut guard) = controls.lock() {
+                                *guard = Some(mc);
+                            }
                         }
                         Err(error) => println!("Error initializing MediaControls: {:?}", error),
                     }

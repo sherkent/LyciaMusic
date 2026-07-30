@@ -13,6 +13,14 @@ use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 // 辅助函数
 // =====================================================
 
+/// 安全获取当前 Unix 时间戳（秒）。系统时钟异常时返回错误，避免 unwrap panic。
+fn current_timestamp_secs() -> Result<i64, String> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs() as i64)
+        .map_err(|error| format!("系统时间异常: {}", error))
+}
+
 /// 判断是否为无效的专辑/歌手名（用于统计时排除）
 fn is_invalid_name(name: &str) -> bool {
     let normalized = name.trim().to_lowercase();
@@ -864,10 +872,8 @@ pub fn get_library_stats(db: State<DbState>) -> Result<LibraryStats, String> {
 
     // 本月首次入库数量
     let this_month_added: i64 = {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64;
+        // 修复：系统时钟异常时回退到 0，避免 SystemTime::duration_since unwrap panic
+        let now = current_timestamp_secs().unwrap_or(0);
         // 简化：30天内入库
         let month_start = now - 30 * 24 * 60 * 60;
         conn.query_row(
@@ -906,10 +912,8 @@ pub enum TimeRange {
 
 impl TimeRange {
     fn to_timestamp_from(&self) -> Option<i64> {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64;
+        // 修复：系统时钟异常时返回 None，避免 SystemTime::duration_since unwrap panic
+        let now = current_timestamp_secs().ok()?;
 
         match self {
             TimeRange::All => None,
@@ -1695,10 +1699,8 @@ fn insert_history_event(
 pub fn add_to_history(db: State<DbState>, song_path: String) -> Result<(), String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let normalized_path = normalize_path(&song_path);
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as i64;
+    // 修复：系统时钟异常时向上返回错误，避免 SystemTime::duration_since unwrap panic
+    let now = current_timestamp_secs()?;
 
     insert_history_event(&conn, &normalized_path, now, 0, "recent")
 }
@@ -2377,10 +2379,8 @@ pub fn record_play(db: State<DbState>, payload: RecordPlayPayload) -> Result<(),
         None => return Ok(()),
     };
 
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as i64;
+    // 修复：系统时钟异常时向上返回错误，避免 SystemTime::duration_since unwrap panic
+    let now = current_timestamp_secs()?;
 
     let played_seconds = (payload.listened_ms.max(0) / 1000).max(0);
     conn.execute(
@@ -2621,11 +2621,9 @@ pub fn get_behavior_stats(
     // 即使 time_range 不是 7Days，我们也始终返回最近 7 天的趋势供 UI 显示
     let mut recent_activity: Vec<i64> = vec![0; 7];
     {
+        // 修复：系统时钟异常时向上返回错误，避免 SystemTime::duration_since unwrap panic
+        let now = current_timestamp_secs()?;
         // 算出 7 天前的零点时间戳 (简化处理，按 24h 倒推)
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64;
         let day_seconds = 24 * 60 * 60;
         let start_time = now - 7 * day_seconds;
 

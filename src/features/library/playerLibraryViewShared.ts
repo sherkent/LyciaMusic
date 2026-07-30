@@ -13,7 +13,11 @@ export const isDirectParent = (parentPath: string, childPath: string) => {
   return lastSlash !== -1 && normalizedChild.substring(0, lastSlash) === normalizedParent;
 };
 
-export const getSongArtistNames = (song: Song) => {
+export const getSongArtistNames = (song: Song | undefined) => {
+  if (!song) {
+    return ['Unknown'];
+  }
+
   if (Array.isArray(song.effective_artist_names) && song.effective_artist_names.length > 0) {
     return song.effective_artist_names;
   }
@@ -25,20 +29,29 @@ export const getSongArtistNames = (song: Song) => {
   return [song.artist || 'Unknown'];
 };
 
-export const songHasArtist = (song: Song, artistName: string) =>
-  getSongArtistNames(song).some(name => name === artistName);
+// 修复：允许传入 undefined，避免歌曲已被移除时调用方使用非空断言导致运行时异常
+export const songHasArtist = (song: Song | undefined, artistName: string) =>
+  !!song && getSongArtistNames(song).some(name => name === artistName);
 
-export const getSongAlbumKey = (song: Song) =>
-  song.album_key || `${song.album || 'Unknown'}::${song.album_artist || song.artist || 'Unknown'}`;
+export const getSongAlbumKey = (song: Song | undefined) =>
+  song?.album_key || (song ? `${song.album || 'Unknown'}::${song.album_artist || song.artist || 'Unknown'}` : '');
 
-export const matchesAlbumKey = (song: Song, albumKey: string) => getSongAlbumKey(song) === albumKey;
+// 修复：允许传入 undefined，避免歌曲已被移除时调用方使用非空断言导致运行时异常
+export const matchesAlbumKey = (song: Song | undefined, albumKey: string) =>
+  !!song && getSongAlbumKey(song) === albumKey;
 
-export const getSongArtistSearchText = (song: Song) =>
-  [song.artist, song.album_artist, ...getSongArtistNames(song)].join(' ').toLowerCase();
+export const getSongArtistSearchText = (song: Song | undefined) =>
+  song ? [song.artist, song.album_artist, ...getSongArtistNames(song)].join(' ').toLowerCase() : '';
 
-export const getSongTitleLabel = (song: Song) => song.title || song.name;
+// 修复：允许传入 undefined，避免歌曲已被移除时调用方使用非空断言导致运行时异常
+export const getSongTitleLabel = (song: Song | undefined) => song?.title || song?.name || '';
 
-export const getSongFileNameLabel = (song: Song) => song.name;
+// 修复：允许传入 undefined，避免歌曲已被移除时调用方使用非空断言导致运行时异常
+export const getSongFileNameLabel = (song: Song | undefined) => song?.name || '';
+
+// 修复：允许传入 undefined，并对 song.name 做可选链处理，避免 undefined 时调用 replace 抛出 TypeError
+export const getSongDisplayTitle = (song: Song | undefined) =>
+  song?.title?.trim() || song?.name?.replace(/\.[^/.]+$/, '') || song?.name || '';
 
 export const parseSortIndexValue = (value?: string) => {
   if (!value) {
